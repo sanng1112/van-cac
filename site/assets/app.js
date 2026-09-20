@@ -2,7 +2,7 @@ const CATALOG_URL = "data/catalog.json";
 const chapterUrl = (slug, id) => `data/books/${slug}/chapters/${String(id).padStart(4, "0")}.json`;
 const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size", sidebarCollapsed: "van-cac:sidebar-collapsed", sidebarWidth: "van-cac:sidebar-width" };
 const SIDEBAR = { collapseAt: 180, maxWidth: 520, defaultWidth: 300, keyboardStep: 20 };
-const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null };
+const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null, resizePointerId: null };
 const elements = {
   sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"), backdrop: document.querySelector("#toc-backdrop"),
   title: document.querySelector("#book-title"), originalTitle: document.querySelector("#original-title"),
@@ -55,17 +55,25 @@ function resizeFromPointer(clientX) {
   if (!collapseTarget) setSidebarWidth(width, { persist: false });
 }
 function startSidebarResize(event) {
-  if (event.button !== 0) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
   event.preventDefault();
+  state.resizePointerId = event.pointerId;
   state.resizeCandidate = state.sidebarWidth;
   elements.appShell.classList.add("is-resizing");
-  elements.sidebarResizer.setPointerCapture(event.pointerId);
+  window.addEventListener("pointermove", moveSidebarResize);
+  window.addEventListener("pointerup", endSidebarResize);
+  window.addEventListener("pointercancel", endSidebarResize);
   resizeFromPointer(event.clientX);
 }
+function moveSidebarResize(event) {
+  if (event.pointerId === state.resizePointerId) resizeFromPointer(event.clientX);
+}
 function endSidebarResize(event) {
-  if (!elements.appShell.classList.contains("is-resizing")) return;
+  if (!elements.appShell.classList.contains("is-resizing") || event.pointerId !== state.resizePointerId) return;
   elements.appShell.classList.remove("is-resizing", "is-sidebar-collapse-target");
-  if (elements.sidebarResizer.hasPointerCapture(event.pointerId)) elements.sidebarResizer.releasePointerCapture(event.pointerId);
+  window.removeEventListener("pointermove", moveSidebarResize);
+  window.removeEventListener("pointerup", endSidebarResize);
+  window.removeEventListener("pointercancel", endSidebarResize);
   if (state.resizeCandidate < SIDEBAR.collapseAt) {
     setSidebarCollapsed(true);
   } else {
@@ -73,6 +81,7 @@ function endSidebarResize(event) {
     setSidebarWidth(state.sidebarWidth);
   }
   state.resizeCandidate = null;
+  state.resizePointerId = null;
 }
 function handleResizerKeydown(event) {
   if (event.key === "Home") { event.preventDefault(); return setSidebarCollapsed(true); }
@@ -185,8 +194,7 @@ function updateProgress() { const max = document.documentElement.scrollHeight - 
 function bindEvents() {
   document.querySelector("#theme-toggle").addEventListener("click", toggleTheme); document.querySelector("#font-decrease").addEventListener("click", () => setFontSize(state.fontSize - 1)); document.querySelector("#font-increase").addEventListener("click", () => setFontSize(state.fontSize + 1));
   elements.sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!elements.appShell.classList.contains("sidebar-collapsed")));
-  elements.sidebarResizer.addEventListener("pointerdown", startSidebarResize); elements.sidebarResizer.addEventListener("pointermove", (event) => { if (elements.appShell.classList.contains("is-resizing")) resizeFromPointer(event.clientX); });
-  elements.sidebarResizer.addEventListener("pointerup", endSidebarResize); elements.sidebarResizer.addEventListener("pointercancel", endSidebarResize); elements.sidebarResizer.addEventListener("keydown", handleResizerKeydown);
+  elements.sidebarResizer.addEventListener("pointerdown", startSidebarResize); elements.sidebarResizer.addEventListener("keydown", handleResizerKeydown);
   elements.search.addEventListener("input", (event) => renderChapterList(event.target.value)); elements.previous.addEventListener("click", () => loadChapter(Number(elements.previous.dataset.chapterId))); elements.next.addEventListener("click", () => loadChapter(Number(elements.next.dataset.chapterId))); elements.bookmark.addEventListener("click", toggleBookmark); elements.tocToggle?.addEventListener("click", toggleToc); elements.backdrop.addEventListener("click", closeToc);
   for (const link of document.querySelectorAll("#home-link, #library-link")) link.addEventListener("click", (event) => { event.preventDefault(); showLibrary(); });
   addEventListener("scroll", updateProgress, { passive: true }); addEventListener("resize", updateProgress); addEventListener("popstate", () => { const slug = new URLSearchParams(location.search).get("book"); slug ? openBook(slug) : showLibrary(); });

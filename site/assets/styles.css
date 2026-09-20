@@ -110,9 +110,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: none; box-
 .text-button { min-height: 40px; padding: 8px 11px; font-size: 14px; }
 
 .app-shell {
-  position: relative;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) 14px minmax(0, 1fr);
   max-width: 1500px;
   min-height: calc(100vh - var(--topbar-height));
   margin: 0 auto;
@@ -120,9 +119,11 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: none; box-
 .app-shell.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
 .app-shell.sidebar-collapsed .sidebar { display: none; }
 .app-shell.sidebar-collapsed .sidebar-resizer { display: none; }
+.app-shell.sidebar-collapsed .reader { grid-column: 1; }
 .app-shell.is-resizing, .app-shell.is-resizing * { cursor: col-resize !important; user-select: none; }
 
 .sidebar {
+  grid-column: 1;
   position: sticky;
   top: var(--topbar-height);
   height: calc(100dvh - var(--topbar-height));
@@ -130,8 +131,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: none; box-
   border-right: 1px solid var(--faint);
   overflow-y: auto;
 }
-.sidebar-resizer { position: absolute; z-index: 12; top: 0; bottom: 0; left: var(--sidebar-width); width: 20px; margin-left: -10px; cursor: col-resize; touch-action: none; }
-.sidebar-resizer::before { position: absolute; top: 0; bottom: 0; left: 9px; width: 2px; border-radius: 2px; background: var(--faint); content: ""; transition: background 150ms ease, width 150ms ease; }
+.sidebar-resizer { position: sticky; z-index: 12; top: var(--topbar-height); grid-column: 2; grid-row: 1; align-self: start; width: 14px; height: calc(100dvh - var(--topbar-height)); cursor: col-resize; touch-action: none; }
+.sidebar-resizer::before { position: absolute; top: 0; bottom: 0; left: 6px; width: 2px; border-radius: 2px; background: var(--faint); content: ""; transition: background 150ms ease, width 150ms ease; }
 .sidebar-resizer:hover::before, .sidebar-resizer:focus-visible::before, .app-shell.is-resizing .sidebar-resizer::before { width: 4px; background: var(--accent); }
 .app-shell.is-sidebar-collapse-target .sidebar-resizer::before { background: var(--accent); }
 .library-link { display: inline-block; margin: -6px 0 28px; color: var(--accent); font-size: 13px; font-weight: 700; text-decoration: none; }
@@ -198,7 +199,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: none; box-
 .chapter-number { font-variant-numeric: tabular-nums; font-size: 13px; }
 .chapter-name { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 
-.reader { width: min(100%, 870px); padding: clamp(32px, 5vw, 52px) clamp(32px, 6vw, 64px) 80px; margin: 0 auto; }
+.reader { grid-column: 3; width: min(100%, 870px); padding: clamp(32px, 5vw, 52px) clamp(32px, 6vw, 64px) 80px; margin: 0 auto; }
 .library { grid-column: 1 / -1; width: min(100%, 1120px); padding: clamp(48px, 8vw, 92px) clamp(24px, 6vw, 72px); margin: 0 auto; }
 .library h1 { max-width: 560px; margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 5vw, 48px); line-height: 1.08; letter-spacing: -.03em; }
 .library-intro { max-width: 520px; margin: 17px 0 42px; color: var(--muted); line-height: 1.6; }
