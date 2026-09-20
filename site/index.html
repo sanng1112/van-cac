@@ -42,6 +42,7 @@
         </label>
         <nav class="chapter-list" id="chapter-list" aria-label="Danh sách chương"></nav>
       </aside>
+      <div class="sidebar-resizer desktop-only" id="sidebar-resizer" role="separator" tabindex="0" title="Kéo để đổi độ rộng; thả khi mục lục nhỏ hơn 180px để ẩn" aria-label="Kéo để đổi độ rộng mục lục" aria-orientation="vertical" aria-valuemin="180" aria-valuemax="520" aria-valuenow="300"></div>
       <button class="sidebar-backdrop" id="toc-backdrop" type="button" aria-label="Đóng mục lục" hidden></button>
 
       <section class="reader" aria-live="polite">
@@ -50,11 +51,6 @@
             <button class="text-button" id="bookmark-button" type="button">Đánh dấu chương này</button>
             <div class="sidebar-controls desktop-only" aria-label="Điều chỉnh mục lục">
               <button class="text-button sidebar-toggle" id="sidebar-toggle" type="button" aria-controls="sidebar" aria-pressed="false">Ẩn mục lục</button>
-              <label class="sidebar-width-control" for="sidebar-width">
-                <span class="sr-only">Độ rộng mục lục</span>
-                <input id="sidebar-width" type="range" min="240" max="420" step="20" value="300" />
-                <output id="sidebar-size-label" for="sidebar-width">300px</output>
-              </label>
             </div>
           </div>
           <div class="font-controls" aria-label="Cỡ chữ">
