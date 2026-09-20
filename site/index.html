@@ -23,7 +23,7 @@
       </div>
     </header>
 
-    <main class="app-shell">
+    <main class="app-shell" id="app-shell">
       <aside class="sidebar" id="sidebar" aria-label="Mục lục">
         <a class="library-link" href="./" id="library-link">← Tất cả tác phẩm</a>
         <div class="book-details">
@@ -45,8 +45,18 @@
       <button class="sidebar-backdrop" id="toc-backdrop" type="button" aria-label="Đóng mục lục" hidden></button>
 
       <section class="reader" aria-live="polite">
-        <div class="reader-toolbar">
-          <button class="text-button" id="bookmark-button" type="button">Đánh dấu chương này</button>
+        <div class="reader-toolbar" aria-label="Thanh điều khiển đọc">
+          <div class="reader-actions">
+            <button class="text-button" id="bookmark-button" type="button">Đánh dấu chương này</button>
+            <div class="sidebar-controls desktop-only" aria-label="Điều chỉnh mục lục">
+              <button class="text-button sidebar-toggle" id="sidebar-toggle" type="button" aria-controls="sidebar" aria-pressed="false">Ẩn mục lục</button>
+              <label class="sidebar-width-control" for="sidebar-width">
+                <span class="sr-only">Độ rộng mục lục</span>
+                <input id="sidebar-width" type="range" min="240" max="420" step="20" value="300" />
+                <output id="sidebar-size-label" for="sidebar-width">300px</output>
+              </label>
+            </div>
+          </div>
           <div class="font-controls" aria-label="Cỡ chữ">
             <button class="icon-button" id="font-decrease" type="button" aria-label="Giảm cỡ chữ">A−</button>
             <span id="font-size-label">20</span>

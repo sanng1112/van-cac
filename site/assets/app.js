@@ -1,7 +1,7 @@
 const CATALOG_URL = "data/catalog.json";
 const chapterUrl = (slug, id) => `data/books/${slug}/chapters/${String(id).padStart(4, "0")}.json`;
-const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size" };
-const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20 };
+const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size", sidebarCollapsed: "van-cac:sidebar-collapsed", sidebarWidth: "van-cac:sidebar-width" };
+const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: 300 };
 const elements = {
   sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"), backdrop: document.querySelector("#toc-backdrop"),
   title: document.querySelector("#book-title"), originalTitle: document.querySelector("#original-title"),
@@ -11,7 +11,8 @@ const elements = {
   previous: document.querySelector("#previous-chapter"), next: document.querySelector("#next-chapter"),
   progress: document.querySelector("#reading-progress-bar"), fontLabel: document.querySelector("#font-size-label"),
   bookmark: document.querySelector("#bookmark-button"), reader: document.querySelector(".reader"),
-  library: document.querySelector("#library"), bookList: document.querySelector("#book-list"),
+  library: document.querySelector("#library"), bookList: document.querySelector("#book-list"), appShell: document.querySelector("#app-shell"),
+  sidebarToggle: document.querySelector("#sidebar-toggle"), sidebarWidth: document.querySelector("#sidebar-width"), sidebarSizeLabel: document.querySelector("#sidebar-size-label"),
 };
 
 const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -30,6 +31,20 @@ function setFontSize(size) {
   document.documentElement.style.setProperty("--reader-size", `${state.fontSize}px`);
   elements.fontLabel.textContent = state.fontSize;
   localStorage.setItem(STORAGE.fontSize, String(state.fontSize));
+}
+function setSidebarWidth(size) {
+  state.sidebarWidth = Math.max(240, Math.min(420, size));
+  document.documentElement.style.setProperty("--sidebar-width", `${state.sidebarWidth}px`);
+  elements.sidebarWidth.value = String(state.sidebarWidth);
+  elements.sidebarSizeLabel.value = `${state.sidebarWidth}px`;
+  elements.sidebarSizeLabel.textContent = `${state.sidebarWidth}px`;
+  localStorage.setItem(STORAGE.sidebarWidth, String(state.sidebarWidth));
+}
+function setSidebarCollapsed(collapsed) {
+  elements.appShell.classList.toggle("sidebar-collapsed", collapsed);
+  elements.sidebarToggle.setAttribute("aria-pressed", String(collapsed));
+  elements.sidebarToggle.textContent = collapsed ? "Hiện mục lục" : "Ẩn mục lục";
+  localStorage.setItem(STORAGE.sidebarCollapsed, String(collapsed));
 }
 function setTags(target, genres) { target.replaceChildren(...genres.map((genre) => Object.assign(document.createElement("span"), { textContent: genre }))); }
 
@@ -133,13 +148,16 @@ function toggleToc() {
 function updateProgress() { const max = document.documentElement.scrollHeight - innerHeight; elements.progress.style.width = `${Math.min(100, Math.max(0, max > 0 ? scrollY / max * 100 : 0))}%`; }
 function bindEvents() {
   document.querySelector("#theme-toggle").addEventListener("click", toggleTheme); document.querySelector("#font-decrease").addEventListener("click", () => setFontSize(state.fontSize - 1)); document.querySelector("#font-increase").addEventListener("click", () => setFontSize(state.fontSize + 1));
+  elements.sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!elements.appShell.classList.contains("sidebar-collapsed")));
+  elements.sidebarWidth.addEventListener("input", (event) => setSidebarWidth(Number(event.target.value)));
   elements.search.addEventListener("input", (event) => renderChapterList(event.target.value)); elements.previous.addEventListener("click", () => loadChapter(Number(elements.previous.dataset.chapterId))); elements.next.addEventListener("click", () => loadChapter(Number(elements.next.dataset.chapterId))); elements.bookmark.addEventListener("click", toggleBookmark); elements.tocToggle?.addEventListener("click", toggleToc); elements.backdrop.addEventListener("click", closeToc);
   for (const link of document.querySelectorAll("#home-link, #library-link")) link.addEventListener("click", (event) => { event.preventDefault(); showLibrary(); });
   addEventListener("scroll", updateProgress, { passive: true }); addEventListener("resize", updateProgress); addEventListener("popstate", () => { const slug = new URLSearchParams(location.search).get("book"); slug ? openBook(slug) : showLibrary(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") return closeToc(); if (event.target.matches("input, textarea") || !state.currentSlug) return; if (event.key === "ArrowLeft" && !elements.previous.disabled) elements.previous.click(); if (event.key === "ArrowRight" && !elements.next.disabled) elements.next.click(); });
 }
 async function start() {
-  setTheme(localStorage.getItem(STORAGE.theme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")); setFontSize(Number(localStorage.getItem(STORAGE.fontSize)) || 20); bindEvents();
+  setTheme(localStorage.getItem(STORAGE.theme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")); setFontSize(Number(localStorage.getItem(STORAGE.fontSize)) || 20);
+  setSidebarWidth(Number(localStorage.getItem(STORAGE.sidebarWidth)) || 300); setSidebarCollapsed(localStorage.getItem(STORAGE.sidebarCollapsed) === "true"); bindEvents();
   try { const response = await fetch(CATALOG_URL); if (!response.ok) throw new Error("Không tải được catalog"); state.catalog = await response.json(); renderLibrary(); const slug = new URLSearchParams(location.search).get("book"); slug ? await openBook(slug) : showLibrary(); }
   catch (error) { elements.library.hidden = false; elements.library.replaceChildren(Object.assign(document.createElement("p"), { className: "empty-state", textContent: "Không thể mở thư viện. Hãy chạy lệnh tạo dữ liệu trước khi xem tại máy." })); console.error(error); }
 }
