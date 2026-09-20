@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import shutil
 from pathlib import Path
@@ -12,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BOOKS_DIR = ROOT / "books"
 OUTPUT_DIR = ROOT / "site" / "data"
+SITE_DIR = ROOT / "site"
+INDEX_OUTPUT = SITE_DIR / "index.html"
 CHAPTER_PATTERN = re.compile(r"^chap_(\d+)(?:_.+)?\.txt$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 REQUIRED_BOOK_FIELDS = ("title", "author")
@@ -38,6 +41,29 @@ def write_json(path: Path, value: object) -> None:
         json.dumps(value, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def asset_version(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def update_site_index_asset_versions() -> None:
+    if not INDEX_OUTPUT.is_file():
+        raise SystemExit(f"Không tìm thấy index.html: {INDEX_OUTPUT.relative_to(ROOT)}")
+    stylesheet = SITE_DIR / "assets" / "styles.css"
+    script = SITE_DIR / "assets" / "app.js"
+    html = INDEX_OUTPUT.read_text(encoding="utf-8")
+    html = re.sub(
+        r'href="assets/styles\.css(?:\?v=[a-f0-9]+)?"',
+        f'href="assets/styles.css?v={asset_version(stylesheet)}"',
+        html,
+    )
+    html = re.sub(
+        r'src="assets/app\.js(?:\?v=[a-f0-9]+)?"',
+        f'src="assets/app.js?v={asset_version(script)}"',
+        html,
+    )
+    INDEX_OUTPUT.write_text(html, encoding="utf-8")
 
 
 def read_metadata(book_dir: Path) -> dict[str, object]:
@@ -122,6 +148,7 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True)
     books = [build_book(book_dir) for book_dir in book_dirs]
     write_json(OUTPUT_DIR / "catalog.json", {"libraryTitle": "Văn các", "books": books})
+    update_site_index_asset_versions()
     total_chapters = sum(int(book["chapterCount"]) for book in books)
     print(f"Đã tạo catalog {len(books)} tác phẩm, {total_chapters} chương tại {OUTPUT_DIR.relative_to(ROOT)}")
 

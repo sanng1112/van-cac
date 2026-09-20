@@ -26,6 +26,8 @@ python3 tools/build_reader_data.py
 python3 -m http.server 8000 -d site
 ```
 
+Lệnh build cũng tự động cập nhật fingerprint phiên bản cho CSS và JavaScript trong `site/index.html` để tránh trình duyệt lưu cache asset cũ sau khi deploy.
+
 Mở `http://localhost:8000`. Không mở trực tiếp `site/index.html`, vì trình duyệt sẽ chặn việc tải dữ liệu chương qua `fetch` khi dùng giao thức `file://`.
 
 ## Đưa lên GitHub Pages

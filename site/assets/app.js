@@ -2,7 +2,7 @@ const CATALOG_URL = "data/catalog.json";
 const chapterUrl = (slug, id) => `data/books/${slug}/chapters/${String(id).padStart(4, "0")}.json`;
 const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size", sidebarCollapsed: "van-cac:sidebar-collapsed", sidebarWidth: "van-cac:sidebar-width" };
 const SIDEBAR = { collapseAt: 180, maxWidth: 520, defaultWidth: 300, keyboardStep: 20 };
-const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null, resizePointerId: null };
+const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null, resizePointerId: null, resizeStartX: 0, resizeStartWidth: 0 };
 const elements = {
   sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"), backdrop: document.querySelector("#toc-backdrop"),
   title: document.querySelector("#book-title"), originalTitle: document.querySelector("#original-title"),
@@ -47,8 +47,7 @@ function setSidebarCollapsed(collapsed) {
   localStorage.setItem(STORAGE.sidebarCollapsed, String(collapsed));
 }
 function resizeFromPointer(clientX) {
-  const bounds = elements.appShell.getBoundingClientRect();
-  const width = Math.round(clientX - bounds.left);
+  const width = Math.round(state.resizeStartWidth + clientX - state.resizeStartX);
   state.resizeCandidate = width;
   const collapseTarget = width < SIDEBAR.collapseAt;
   elements.appShell.classList.toggle("is-sidebar-collapse-target", collapseTarget);
@@ -58,12 +57,13 @@ function startSidebarResize(event) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   event.preventDefault();
   state.resizePointerId = event.pointerId;
+  state.resizeStartX = event.clientX;
+  state.resizeStartWidth = state.sidebarWidth;
   state.resizeCandidate = state.sidebarWidth;
   elements.appShell.classList.add("is-resizing");
   window.addEventListener("pointermove", moveSidebarResize);
   window.addEventListener("pointerup", endSidebarResize);
   window.addEventListener("pointercancel", endSidebarResize);
-  resizeFromPointer(event.clientX);
 }
 function moveSidebarResize(event) {
   if (event.pointerId === state.resizePointerId) resizeFromPointer(event.clientX);
@@ -82,6 +82,8 @@ function endSidebarResize(event) {
   }
   state.resizeCandidate = null;
   state.resizePointerId = null;
+  state.resizeStartX = 0;
+  state.resizeStartWidth = 0;
 }
 function handleResizerKeydown(event) {
   if (event.key === "Home") { event.preventDefault(); return setSidebarCollapsed(true); }
@@ -156,10 +158,12 @@ function updateBookmarkButton() { elements.bookmark.textContent = Number(localSt
 function updateUrl() { const url = new URL(location.href); url.search = ""; url.searchParams.set("book", state.currentSlug); url.searchParams.set("chapter", state.currentId); history.replaceState({}, "", url); }
 function showReader() {
   elements.library.hidden = true; elements.reader.hidden = false; elements.sidebar.hidden = false;
+  elements.sidebarResizer.hidden = elements.appShell.classList.contains("sidebar-collapsed");
   elements.tocToggle.hidden = false;
 }
 function showLibrary() {
-  state.currentSlug = null; state.currentId = null; elements.reader.hidden = true; elements.sidebar.hidden = true; elements.library.hidden = false;
+  state.currentSlug = null; state.currentId = null; elements.reader.hidden = true; elements.sidebar.hidden = true;
+  elements.sidebarResizer.hidden = true; elements.library.hidden = false;
   elements.tocToggle.hidden = true; document.title = `${state.catalog.libraryTitle} — Thư viện truyện`;
   history.replaceState({}, "", location.pathname); closeToc(); window.scrollTo({ top: 0, behavior: "auto" });
 }
