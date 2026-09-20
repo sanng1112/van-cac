@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f1e8" />
+    <meta name="description" content="Thư viện đọc tiểu thuyết tiếng Việt." />
+    <title>Văn các — Thư viện truyện</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Về thư viện" id="home-link">
+        <span class="brand-mark">V</span>
+        <span>Văn các</span>
+      </a>
+      <div class="topbar-actions">
+        <button class="text-button mobile-only" id="open-toc" type="button" aria-expanded="false" aria-controls="sidebar">Mục lục</button>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Đổi giao diện" title="Đổi giao diện">
+          <span aria-hidden="true">☾</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Mục lục">
+        <a class="library-link" href="./" id="library-link">← Tất cả tác phẩm</a>
+        <div class="book-details">
+          <p class="eyebrow">Tiểu thuyết đang dịch</p>
+          <h1 id="book-title">Đang tải…</h1>
+          <p class="original-title" id="original-title"></p>
+          <p class="author" id="book-author"></p>
+          <div class="tags" id="book-tags"></div>
+          <p class="chapter-total" id="chapter-total"></p>
+        </div>
+
+        <label class="search-field" for="chapter-search">
+          <span class="sr-only">Tìm chương</span>
+          <span aria-hidden="true">⌕</span>
+          <input id="chapter-search" type="search" placeholder="Tìm chương hoặc tiêu đề" autocomplete="off" />
+        </label>
+        <nav class="chapter-list" id="chapter-list" aria-label="Danh sách chương"></nav>
+      </aside>
+
+      <section class="reader" aria-live="polite">
+        <div class="reader-toolbar">
+          <button class="text-button" id="bookmark-button" type="button">Đánh dấu chương này</button>
+          <div class="font-controls" aria-label="Cỡ chữ">
+            <button class="icon-button" id="font-decrease" type="button" aria-label="Giảm cỡ chữ">A−</button>
+            <span id="font-size-label">20</span>
+            <button class="icon-button" id="font-increase" type="button" aria-label="Tăng cỡ chữ">A+</button>
+          </div>
+        </div>
+
+        <article class="chapter" id="chapter-content">
+          <p class="loading">Đang mở chương…</p>
+        </article>
+
+        <nav class="chapter-navigation" aria-label="Điều hướng chương">
+          <button class="nav-button" id="previous-chapter" type="button">← Chương trước</button>
+          <button class="nav-button" id="next-chapter" type="button">Chương sau →</button>
+        </nav>
+      </section>
+
+      <section class="library" id="library" aria-live="polite" hidden>
+        <p class="eyebrow">Thư viện</p>
+        <h1>Chọn một tác phẩm để bắt đầu đọc</h1>
+        <p class="library-intro">Tiến độ đọc được lưu riêng cho từng truyện trên trình duyệt này.</p>
+        <div class="book-grid" id="book-list"></div>
+      </section>
+    </main>
+
+    <template id="chapter-item-template">
+      <button class="chapter-link" type="button">
+        <span class="chapter-number"></span>
+        <span class="chapter-name"></span>
+      </button>
+    </template>
+    <template id="book-card-template">
+      <a class="book-card" href="">
+        <div class="book-card-mark" aria-hidden="true"></div>
+        <div>
+          <p class="book-status"></p>
+          <h2 class="book-card-title"></h2>
+          <p class="book-card-original"></p>
+          <p class="book-card-author"></p>
+          <div class="tags book-card-tags"></div>
+          <p class="book-card-summary"></p>
+          <span class="book-card-action">Đọc truyện →</span>
+        </div>
+      </a>
+    </template>
+    <script src="assets/app.js" defer></script>
+  </body>
+</html>

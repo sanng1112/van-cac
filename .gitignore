@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+
+# Build output (created in CI and when serving locally)
+site/data/
+compiled/
+
+# Local translation source and one-off exports, not needed to build the web reader
+raw_chapters/
+Ta_That_Khong_Muon_Trung_Sinh_A_Tieng_Viet.txt
+我真没想重生啊.txt
+chapters_index.json
+glossary.json
+translation_status.json
