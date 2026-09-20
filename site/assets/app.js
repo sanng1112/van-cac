@@ -3,7 +3,7 @@ const chapterUrl = (slug, id) => `data/books/${slug}/chapters/${String(id).padSt
 const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size" };
 const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20 };
 const elements = {
-  sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"),
+  sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"), backdrop: document.querySelector("#toc-backdrop"),
   title: document.querySelector("#book-title"), originalTitle: document.querySelector("#original-title"),
   author: document.querySelector("#book-author"), tags: document.querySelector("#book-tags"),
   chapterTotal: document.querySelector("#chapter-total"), search: document.querySelector("#chapter-search"),
@@ -19,7 +19,11 @@ const bookStorage = (key) => `van-cac:${state.currentSlug}:${key}`;
 const getChapter = (id) => state.manifest?.chapters.find((chapter) => chapter.id === id);
 const currentIndex = () => state.manifest.chapters.findIndex((chapter) => chapter.id === state.currentId);
 
-function setTheme(theme) { document.documentElement.dataset.theme = theme; localStorage.setItem(STORAGE.theme, theme); }
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#191817" : "#f6f1e8";
+  localStorage.setItem(STORAGE.theme, theme);
+}
 function toggleTheme() { setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); }
 function setFontSize(size) {
   state.fontSize = Math.max(16, Math.min(28, size));
@@ -41,6 +45,10 @@ function renderLibrary() {
     card.querySelector(".book-card-original").textContent = book.originalTitle || "";
     card.querySelector(".book-card-author").textContent = `Tác giả: ${book.author}`;
     card.querySelector(".book-card-summary").textContent = book.description || "Chưa có mô tả cho tác phẩm này.";
+    const savedChapter = Number(localStorage.getItem(`van-cac:${book.slug}:last-chapter`));
+    card.querySelector(".book-card-action").textContent = savedChapter > 0
+      ? `Đọc tiếp · Chương ${savedChapter} →`
+      : "Bắt đầu đọc →";
     setTags(card.querySelector(".book-card-tags"), book.genres);
     fragment.append(card);
   }
@@ -86,8 +94,15 @@ function updateNavigation() {
 }
 function updateBookmarkButton() { elements.bookmark.textContent = Number(localStorage.getItem(bookStorage("bookmark"))) === state.currentId ? "Đã đánh dấu" : "Đánh dấu chương này"; }
 function updateUrl() { const url = new URL(location.href); url.search = ""; url.searchParams.set("book", state.currentSlug); url.searchParams.set("chapter", state.currentId); history.replaceState({}, "", url); }
-function showReader() { elements.library.hidden = true; elements.reader.hidden = false; elements.sidebar.hidden = false; }
-function showLibrary() { state.currentSlug = null; state.currentId = null; elements.reader.hidden = true; elements.sidebar.hidden = true; elements.library.hidden = false; document.title = `${state.catalog.libraryTitle} — Thư viện truyện`; history.replaceState({}, "", location.pathname); closeToc(); window.scrollTo({ top: 0, behavior: "auto" }); }
+function showReader() {
+  elements.library.hidden = true; elements.reader.hidden = false; elements.sidebar.hidden = false;
+  elements.tocToggle.hidden = false;
+}
+function showLibrary() {
+  state.currentSlug = null; state.currentId = null; elements.reader.hidden = true; elements.sidebar.hidden = true; elements.library.hidden = false;
+  elements.tocToggle.hidden = true; document.title = `${state.catalog.libraryTitle} — Thư viện truyện`;
+  history.replaceState({}, "", location.pathname); closeToc(); window.scrollTo({ top: 0, behavior: "auto" });
+}
 async function loadChapter(id, { scroll = true } = {}) {
   if (!getChapter(id) || id === state.currentId) return;
   elements.content.replaceChildren(Object.assign(document.createElement("p"), { className: "loading", textContent: "Đang mở chương…" }));
@@ -107,15 +122,21 @@ async function openBook(slug, { scroll = false } = {}) {
   } catch (error) { showReader(); elements.content.replaceChildren(Object.assign(document.createElement("p"), { className: "empty-state", textContent: "Không thể mở tác phẩm này." })); console.error(error); }
 }
 function toggleBookmark() { if (!state.currentId) return; const key = bookStorage("bookmark"); Number(localStorage.getItem(key)) === state.currentId ? localStorage.removeItem(key) : localStorage.setItem(key, String(state.currentId)); updateBookmarkButton(); }
-function closeToc() { elements.sidebar.classList.remove("is-open"); elements.tocToggle?.setAttribute("aria-expanded", "false"); }
-function toggleToc() { const open = elements.sidebar.classList.toggle("is-open"); elements.tocToggle.setAttribute("aria-expanded", String(open)); }
+function closeToc() {
+  elements.sidebar.classList.remove("is-open"); elements.tocToggle?.setAttribute("aria-expanded", "false");
+  elements.backdrop.hidden = true; document.body.classList.remove("toc-open");
+}
+function toggleToc() {
+  const open = elements.sidebar.classList.toggle("is-open"); elements.tocToggle.setAttribute("aria-expanded", String(open));
+  elements.backdrop.hidden = !open; document.body.classList.toggle("toc-open", open);
+}
 function updateProgress() { const max = document.documentElement.scrollHeight - innerHeight; elements.progress.style.width = `${Math.min(100, Math.max(0, max > 0 ? scrollY / max * 100 : 0))}%`; }
 function bindEvents() {
   document.querySelector("#theme-toggle").addEventListener("click", toggleTheme); document.querySelector("#font-decrease").addEventListener("click", () => setFontSize(state.fontSize - 1)); document.querySelector("#font-increase").addEventListener("click", () => setFontSize(state.fontSize + 1));
-  elements.search.addEventListener("input", (event) => renderChapterList(event.target.value)); elements.previous.addEventListener("click", () => loadChapter(Number(elements.previous.dataset.chapterId))); elements.next.addEventListener("click", () => loadChapter(Number(elements.next.dataset.chapterId))); elements.bookmark.addEventListener("click", toggleBookmark); elements.tocToggle?.addEventListener("click", toggleToc);
+  elements.search.addEventListener("input", (event) => renderChapterList(event.target.value)); elements.previous.addEventListener("click", () => loadChapter(Number(elements.previous.dataset.chapterId))); elements.next.addEventListener("click", () => loadChapter(Number(elements.next.dataset.chapterId))); elements.bookmark.addEventListener("click", toggleBookmark); elements.tocToggle?.addEventListener("click", toggleToc); elements.backdrop.addEventListener("click", closeToc);
   for (const link of document.querySelectorAll("#home-link, #library-link")) link.addEventListener("click", (event) => { event.preventDefault(); showLibrary(); });
   addEventListener("scroll", updateProgress, { passive: true }); addEventListener("resize", updateProgress); addEventListener("popstate", () => { const slug = new URLSearchParams(location.search).get("book"); slug ? openBook(slug) : showLibrary(); });
-  document.addEventListener("keydown", (event) => { if (event.target.matches("input, textarea") || !state.currentSlug) return; if (event.key === "ArrowLeft" && !elements.previous.disabled) elements.previous.click(); if (event.key === "ArrowRight" && !elements.next.disabled) elements.next.click(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") return closeToc(); if (event.target.matches("input, textarea") || !state.currentSlug) return; if (event.key === "ArrowLeft" && !elements.previous.disabled) elements.previous.click(); if (event.key === "ArrowRight" && !elements.next.disabled) elements.next.click(); });
 }
 async function start() {
   setTheme(localStorage.getItem(STORAGE.theme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")); setFontSize(Number(localStorage.getItem(STORAGE.fontSize)) || 20); bindEvents();
