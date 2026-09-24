@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f6f1e8" />
     <meta name="description" content="Thư viện đọc tiểu thuyết tiếng Việt." />
     <title>Văn các — Thư viện truyện</title>
-    <link rel="stylesheet" href="assets/styles.css?v=8ef669fcc0d5" />
+    <link rel="stylesheet" href="assets/styles.css?v=6e22998f85e8" />
   </head>
   <body>
     <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
@@ -71,9 +71,32 @@
       </section>
 
       <section class="library" id="library" aria-live="polite" hidden>
-        <p class="eyebrow">Thư viện</p>
-        <h1>Chọn một tác phẩm để bắt đầu đọc</h1>
-        <p class="library-intro">Tiến độ đọc được lưu riêng cho từng truyện trên trình duyệt này.</p>
+        <div class="library-header">
+          <div class="library-header-text">
+            <p class="eyebrow">Thư viện</p>
+            <h1>Chọn một tác phẩm để bắt đầu đọc</h1>
+            <p class="library-intro">Tiến độ đọc được lưu riêng cho từng truyện trên trình duyệt này.</p>
+          </div>
+          <div class="library-toolbar">
+            <div class="sort-bar" role="toolbar" aria-label="Tùy chọn sắp xếp">
+              <span class="sort-title">Sắp xếp:</span>
+              <div class="sort-options" role="tablist">
+                <button class="sort-pill is-active" id="sort-custom" data-sort="custom" type="button" role="tab" aria-selected="true" title="Thứ tự tùy chỉnh của bạn">Tùy chỉnh</button>
+                <button class="sort-pill" id="sort-recent" data-sort="recent" type="button" role="tab" aria-selected="false" title="Truyện vừa đọc gần đây">Vừa đọc</button>
+                <button class="sort-pill" id="sort-chapters" data-sort="chapters" type="button" role="tab" aria-selected="false" title="Nhiều chương nhất">Nhiều chương</button>
+                <button class="sort-pill" id="sort-title" data-sort="title" type="button" role="tab" aria-selected="false" title="Tên tác phẩm A-Z">Tên A-Z</button>
+              </div>
+            </div>
+            <div class="library-actions">
+              <button class="text-button reorder-toggle" id="reorder-toggle" type="button" aria-pressed="false" title="Bật/tắt chế độ di chuyển thứ tự truyện">
+                <span aria-hidden="true">⇅</span> Sắp xếp vị trí
+              </button>
+              <button class="text-button reset-order-btn" id="reset-order-btn" type="button" title="Khôi phục thứ tự mặc định" hidden>
+                Đặt lại mặc định
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="book-grid" id="book-list"></div>
       </section>
     </main>
@@ -85,19 +108,26 @@
       </button>
     </template>
     <template id="book-card-template">
-      <a class="book-card" href="">
-        <div class="book-card-mark" aria-hidden="true"></div>
-        <div>
-          <p class="book-status"></p>
-          <h2 class="book-card-title"></h2>
-          <p class="book-card-original"></p>
-          <p class="book-card-author"></p>
-          <div class="tags book-card-tags"></div>
-          <p class="book-card-summary"></p>
-          <span class="book-card-action">Đọc truyện →</span>
+      <div class="book-card-item">
+        <a class="book-card" href="">
+          <div class="book-card-mark" aria-hidden="true"></div>
+          <div>
+            <p class="book-status"></p>
+            <h2 class="book-card-title"></h2>
+            <p class="book-card-original"></p>
+            <p class="book-card-author"></p>
+            <div class="tags book-card-tags"></div>
+            <p class="book-card-summary"></p>
+            <span class="book-card-action">Đọc truyện →</span>
+          </div>
+        </a>
+        <div class="book-reorder-bar" aria-label="Thay đổi vị trí">
+          <button class="icon-button reorder-btn btn-move-up" type="button" title="Di chuyển lên trước" aria-label="Di chuyển lên trước">▲ Lên</button>
+          <span class="reorder-drag-handle" title="Kéo để đổi vị trí" aria-hidden="true">⋮⋮ Kéo thả</span>
+          <button class="icon-button reorder-btn btn-move-down" type="button" title="Di chuyển xuống sau" aria-label="Di chuyển xuống sau">▼ Xuống</button>
         </div>
-      </a>
+      </div>
     </template>
-    <script src="assets/app.js?v=ccd6b1a9c5dd" defer></script>
+    <script src="assets/app.js?v=01265b62606b" defer></script>
   </body>
 </html>

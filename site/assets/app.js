@@ -1,8 +1,20 @@
 const CATALOG_URL = "data/catalog.json";
 const chapterUrl = (slug, id) => `data/books/${slug}/chapters/${String(id).padStart(4, "0")}.json`;
-const STORAGE = { theme: "van-cac:theme", fontSize: "van-cac:font-size", sidebarCollapsed: "van-cac:sidebar-collapsed", sidebarWidth: "van-cac:sidebar-width" };
+const STORAGE = {
+  theme: "van-cac:theme",
+  fontSize: "van-cac:font-size",
+  sidebarCollapsed: "van-cac:sidebar-collapsed",
+  sidebarWidth: "van-cac:sidebar-width",
+  bookOrder: "van-cac:library-book-order",
+  sortMode: "van-cac:library-sort-mode",
+};
 const SIDEBAR = { collapseAt: 180, maxWidth: 520, defaultWidth: 300, keyboardStep: 20 };
-const state = { catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20, sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null, resizePointerId: null, resizeStartX: 0, resizeStartWidth: 0 };
+const state = {
+  catalog: null, manifest: null, currentId: null, currentSlug: null, fontSize: 20,
+  sidebarWidth: SIDEBAR.defaultWidth, resizeCandidate: null, resizePointerId: null, resizeStartX: 0, resizeStartWidth: 0,
+  sortMode: localStorage.getItem("van-cac:library-sort-mode") || "custom",
+  isReordering: false,
+};
 const elements = {
   sidebar: document.querySelector("#sidebar"), tocToggle: document.querySelector("#open-toc"), backdrop: document.querySelector("#toc-backdrop"),
   title: document.querySelector("#book-title"), originalTitle: document.querySelector("#original-title"),
@@ -14,6 +26,9 @@ const elements = {
   bookmark: document.querySelector("#bookmark-button"), reader: document.querySelector(".reader"),
   library: document.querySelector("#library"), bookList: document.querySelector("#book-list"), appShell: document.querySelector("#app-shell"),
   sidebarToggle: document.querySelector("#sidebar-toggle"), sidebarResizer: document.querySelector("#sidebar-resizer"),
+  sortPills: document.querySelectorAll(".sort-pill"),
+  reorderToggle: document.querySelector("#reorder-toggle"),
+  resetOrderBtn: document.querySelector("#reset-order-btn"),
 };
 
 const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -95,11 +110,148 @@ function handleResizerKeydown(event) {
 }
 function setTags(target, genres) { target.replaceChildren(...genres.map((genre) => Object.assign(document.createElement("span"), { textContent: genre }))); }
 
+function getCustomOrder() {
+  try {
+    const raw = localStorage.getItem(STORAGE.bookOrder);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCustomOrder(order) {
+  localStorage.setItem(STORAGE.bookOrder, JSON.stringify(order));
+  updateResetButtonState();
+}
+
+function updateResetButtonState() {
+  if (elements.resetOrderBtn) {
+    elements.resetOrderBtn.hidden = !getCustomOrder();
+  }
+}
+
+function getSortedBooks() {
+  if (!state.catalog?.books) return [];
+  const books = [...state.catalog.books];
+  const mode = state.sortMode;
+
+  if (mode === "recent") {
+    return books.sort((a, b) => {
+      const lastA = Number(localStorage.getItem(`van-cac:${a.slug}:last-chapter`)) || 0;
+      const lastB = Number(localStorage.getItem(`van-cac:${b.slug}:last-chapter`)) || 0;
+      if (lastA !== lastB) return lastB - lastA;
+      return (a.order ?? 999) - (b.order ?? 999);
+    });
+  }
+
+  if (mode === "chapters") {
+    return books.sort((a, b) => {
+      if (b.chapterCount !== a.chapterCount) return b.chapterCount - a.chapterCount;
+      return (a.order ?? 999) - (b.order ?? 999);
+    });
+  }
+
+  if (mode === "title") {
+    return books.sort((a, b) => a.title.localeCompare(b.title, "vi"));
+  }
+
+  // mode === "custom"
+  const customOrder = getCustomOrder();
+  if (customOrder) {
+    return books.sort((a, b) => {
+      const idxA = customOrder.indexOf(a.slug);
+      const idxB = customOrder.indexOf(b.slug);
+      const posA = idxA !== -1 ? idxA : (a.order ?? 999) + 100;
+      const posB = idxB !== -1 ? idxB : (b.order ?? 999) + 100;
+      return posA - posB;
+    });
+  }
+
+  return books.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+function moveBook(slug, offset) {
+  const books = getSortedBooks();
+  const currentIndex = books.findIndex((b) => b.slug === slug);
+  if (currentIndex === -1) return;
+  const targetIndex = currentIndex + offset;
+  if (targetIndex < 0 || targetIndex >= books.length) return;
+
+  const slugs = books.map((b) => b.slug);
+  const [removed] = slugs.splice(currentIndex, 1);
+  slugs.splice(targetIndex, 0, removed);
+
+  state.sortMode = "custom";
+  localStorage.setItem(STORAGE.sortMode, "custom");
+  saveCustomOrder(slugs);
+  renderLibrary();
+}
+
+function swapBooks(sourceSlug, targetSlug) {
+  if (!sourceSlug || !targetSlug || sourceSlug === targetSlug) return;
+  const books = getSortedBooks();
+  const sourceIndex = books.findIndex((b) => b.slug === sourceSlug);
+  const targetIndex = books.findIndex((b) => b.slug === targetSlug);
+  if (sourceIndex === -1 || targetIndex === -1) return;
+
+  const slugs = books.map((b) => b.slug);
+  const [removed] = slugs.splice(sourceIndex, 1);
+  slugs.splice(targetIndex, 0, removed);
+
+  state.sortMode = "custom";
+  localStorage.setItem(STORAGE.sortMode, "custom");
+  saveCustomOrder(slugs);
+  renderLibrary();
+}
+
+function setSortMode(mode) {
+  state.sortMode = mode;
+  localStorage.setItem(STORAGE.sortMode, mode);
+  renderLibrary();
+}
+
+function toggleReorderMode() {
+  state.isReordering = !state.isReordering;
+  if (state.isReordering && state.sortMode !== "custom") {
+    state.sortMode = "custom";
+    localStorage.setItem(STORAGE.sortMode, "custom");
+  }
+  renderLibrary();
+}
+
+function resetCustomOrder() {
+  localStorage.removeItem(STORAGE.bookOrder);
+  state.sortMode = "custom";
+  localStorage.setItem(STORAGE.sortMode, "custom");
+  updateResetButtonState();
+  renderLibrary();
+}
+
 function renderLibrary() {
   const template = document.querySelector("#book-card-template");
   const fragment = document.createDocumentFragment();
-  for (const book of state.catalog.books) {
-    const card = template.content.firstElementChild.cloneNode(true);
+  const books = getSortedBooks();
+
+  elements.library.classList.toggle("is-reordering-mode", state.isReordering);
+  if (elements.reorderToggle) {
+    elements.reorderToggle.classList.toggle("is-active", state.isReordering);
+    elements.reorderToggle.setAttribute("aria-pressed", String(state.isReordering));
+    elements.reorderToggle.innerHTML = state.isReordering
+      ? '<span aria-hidden="true">✓</span> Xong sắp xếp'
+      : '<span aria-hidden="true">⇅</span> Sắp xếp vị trí';
+  }
+  for (const pill of elements.sortPills) {
+    const isActive = pill.dataset.sort === state.sortMode;
+    pill.classList.toggle("is-active", isActive);
+    pill.setAttribute("aria-selected", String(isActive));
+  }
+  updateResetButtonState();
+
+  books.forEach((book, index) => {
+    const item = template.content.firstElementChild.cloneNode(true);
+    item.dataset.slug = book.slug;
+    const card = item.querySelector(".book-card");
     card.href = `?book=${encodeURIComponent(book.slug)}`;
     card.querySelector(".book-card-mark").textContent = book.title.slice(0, 1).toUpperCase();
     card.querySelector(".book-status").textContent = `${book.status} · ${book.chapterCount} chương`;
@@ -112,8 +264,56 @@ function renderLibrary() {
       ? `Đọc tiếp · Chương ${savedChapter} →`
       : "Bắt đầu đọc →";
     setTags(card.querySelector(".book-card-tags"), book.genres);
-    fragment.append(card);
-  }
+
+    const upBtn = item.querySelector(".btn-move-up");
+    const downBtn = item.querySelector(".btn-move-down");
+    if (upBtn) {
+      upBtn.disabled = index === 0;
+      upBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        moveBook(book.slug, -1);
+      });
+    }
+    if (downBtn) {
+      downBtn.disabled = index === books.length - 1;
+      downBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        moveBook(book.slug, 1);
+      });
+    }
+
+    item.draggable = state.isReordering;
+    item.addEventListener("dragstart", (e) => {
+      if (!state.isReordering) return e.preventDefault();
+      item.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", book.slug);
+    });
+    item.addEventListener("dragend", () => {
+      item.classList.remove("is-dragging");
+      document.querySelectorAll(".book-card-item").forEach((el) => el.classList.remove("drag-over"));
+    });
+    item.addEventListener("dragover", (e) => {
+      if (!state.isReordering) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      item.classList.add("drag-over");
+    });
+    item.addEventListener("dragleave", () => {
+      item.classList.remove("drag-over");
+    });
+    item.addEventListener("drop", (e) => {
+      if (!state.isReordering) return;
+      e.preventDefault();
+      item.classList.remove("drag-over");
+      const sourceSlug = e.dataTransfer.getData("text/plain");
+      swapBooks(sourceSlug, book.slug);
+    });
+
+    fragment.append(item);
+  });
   elements.bookList.replaceChildren(fragment);
 }
 function renderBookDetails() {
@@ -201,6 +401,11 @@ function bindEvents() {
   elements.sidebarResizer.addEventListener("pointerdown", startSidebarResize); elements.sidebarResizer.addEventListener("keydown", handleResizerKeydown);
   elements.search.addEventListener("input", (event) => renderChapterList(event.target.value)); elements.previous.addEventListener("click", () => loadChapter(Number(elements.previous.dataset.chapterId))); elements.next.addEventListener("click", () => loadChapter(Number(elements.next.dataset.chapterId))); elements.bookmark.addEventListener("click", toggleBookmark); elements.tocToggle?.addEventListener("click", toggleToc); elements.backdrop.addEventListener("click", closeToc);
   for (const link of document.querySelectorAll("#home-link, #library-link")) link.addEventListener("click", (event) => { event.preventDefault(); showLibrary(); });
+  elements.sortPills.forEach((pill) => {
+    pill.addEventListener("click", () => setSortMode(pill.dataset.sort));
+  });
+  elements.reorderToggle?.addEventListener("click", toggleReorderMode);
+  elements.resetOrderBtn?.addEventListener("click", resetCustomOrder);
   addEventListener("scroll", updateProgress, { passive: true }); addEventListener("resize", updateProgress); addEventListener("popstate", () => { const slug = new URLSearchParams(location.search).get("book"); slug ? openBook(slug) : showLibrary(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") return closeToc(); if (event.target.matches("input, textarea") || !state.currentSlug) return; if (event.key === "ArrowLeft" && !elements.previous.disabled) elements.previous.click(); if (event.key === "ArrowRight" && !elements.next.disabled) elements.next.click(); });
 }

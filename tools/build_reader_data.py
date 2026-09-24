@@ -127,6 +127,7 @@ def build_book(book_dir: Path) -> dict[str, object]:
         "slug": slug, "title": metadata["title"], "originalTitle": metadata.get("originalTitle", ""),
         "author": metadata["author"], "genres": metadata.get("genres", []),
         "description": metadata.get("description", ""), "status": metadata.get("status", "Đang cập nhật"),
+        "order": int(metadata.get("order", 999)),
     }
     manifest = {
         "book": book,
@@ -147,6 +148,7 @@ def main() -> None:
         shutil.rmtree(OUTPUT_DIR)
     OUTPUT_DIR.mkdir(parents=True)
     books = [build_book(book_dir) for book_dir in book_dirs]
+    books.sort(key=lambda b: (b.get("order", 999), b["title"]))
     write_json(OUTPUT_DIR / "catalog.json", {"libraryTitle": "Văn các", "books": books})
     update_site_index_asset_versions()
     total_chapters = sum(int(book["chapterCount"]) for book in books)
